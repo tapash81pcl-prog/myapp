@@ -539,10 +539,21 @@ def main(page: ft.Page):
             disc_val = net * (disc_pct / 100.0)
             grand = max(net - disc_val, 0.0)
 
-            output_pdf = "Cable_Quotation.pdf"
-            generate_pdf(output_pdf, info, items, net, disc_pct, disc_val, grand, words_text.value, terms)
+            filename = "Cable_Quotation.pdf"
+            save_path = filename
 
-            show_snack(f"PDF successfully saved as: {output_pdf}")
+            # Android-এর জন্য সরাসরি পাবলিক ডাউনলোড ফোল্ডারে পাথ সেট করা হলো যাতে ফাইল সহজে খুঁজে পাওয়া যায়
+            if page.platform == ft.PagePlatform.ANDROID:
+                try:
+                    download_dir = "/storage/emulated/0/Download"
+                    if os.path.exists(download_dir):
+                        save_path = os.path.join(download_dir, filename)
+                except Exception:
+                    pass
+
+            generate_pdf(save_path, info, items, net, disc_pct, disc_val, grand, words_text.value, terms)
+
+            show_snack(f"PDF successfully saved to: {save_path}")
         except Exception as ex:
             show_snack(f"Error generating PDF: {str(ex)}")
 
