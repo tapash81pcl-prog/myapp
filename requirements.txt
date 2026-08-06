@@ -1,4 +1,4 @@
-flet==0.28.3
+flet==0.86.5
 openpyxl
 reportlab
 certifi
