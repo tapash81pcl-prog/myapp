@@ -3,6 +3,7 @@ from datetime import date
 import openpyxl
 import os
 import re
+import tempfile
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -285,6 +286,9 @@ def main(page: ft.Page):
         snack.open = True
         page.update()
 
+    file_picker = ft.FilePicker()
+    page.overlay.append(file_picker)
+
     # --- Inputs ---
     company_name = ft.TextField(label="Company Name", value="ELCO WIRES AND CABLES LIMITED", dense=True)
     company_addr = ft.TextField(label="Company Address", value="102, Shukrabad, Mirpur Road, Dhaka", dense=True)
@@ -519,7 +523,7 @@ def main(page: ft.Page):
         refresh_items_table()
         recalc()
 
-    def export_pdf_click(e):
+    async def export_pdf_click(e):
         if not items:
             show_snack("No items to export! Please add items first.")
             return
@@ -540,22 +544,43 @@ def main(page: ft.Page):
             grand = max(net - disc_val, 0.0)
 
             filename = "Cable_Quotation.pdf"
-            save_path = filename
 
-            # Android-এর জন্য সরাসরি পাবলিক ডাউনলোড ফোল্ডারে পাথ সেট করা হলো যাতে ফাইল সহজে খুঁজে পাওয়া যায়
-            if page.platform == ft.PagePlatform.ANDROID:
-                try:
-                    download_dir = "/storage/emulated/0/Download"
-                    if os.path.exists(download_dir):
-                        save_path = os.path.join(download_dir, filename)
-                except Exception:
-                    pass
+            # First generate the PDF into a temp (always-writable, app-private) location.
+            # On Android 10+, writing directly to /storage/emulated/0/Download needs a
+            # special permission this APK doesn't request, so the old code was either
+            # failing silently or saving into the app's private, invisible folder.
+            tmp_path = os.path.join(tempfile.gettempdir(), filename)
+            generate_pdf(tmp_path, info, items, net, disc_pct, disc_val, grand, words_text.value, terms)
 
-            generate_pdf(save_path, info, items, net, disc_pct, disc_val, grand, words_text.value, terms)
+            with open(tmp_path, "rb") as f:
+                pdf_bytes = f.read()
 
-            show_snack(f"PDF successfully saved to: {save_path}")
+            # save_file() opens the native "Save As" dialog (uses Android's Storage
+            # Access Framework), so no storage permission is needed and the user picks
+            # Download or any folder they like themselves.
+            saved_path = await file_picker.save_file(
+                dialog_title="Save Quotation PDF",
+                file_name=filename,
+                file_type=ft.FilePickerFileType.CUSTOM,
+                allowed_extensions=["pdf"],
+                src_bytes=pdf_bytes,
+            )
+
+            if not saved_path:
+                show_snack("Save cancelled.")
+                return
+
+            # On desktop, save_file() only returns a path and doesn't write the file
+            # itself, so we write the bytes ourselves there. On Android/iOS, Flet
+            # already wrote the file using src_bytes, so skip it.
+            if page.platform not in (ft.PagePlatform.ANDROID, ft.PagePlatform.IOS):
+                with open(saved_path, "wb") as f:
+                    f.write(pdf_bytes)
+
+            show_snack(f"PDF successfully saved to: {saved_path}")
         except Exception as ex:
             show_snack(f"Error generating PDF: {str(ex)}")
+
 
     # --- UI Layout ---
     page.add(
