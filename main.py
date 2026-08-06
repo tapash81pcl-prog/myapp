@@ -539,14 +539,10 @@ def main(page: ft.Page):
             disc_val = net * (disc_pct / 100.0)
             grand = max(net - disc_val, 0.0)
 
-            download_dir = "/storage/emulated/0/Download"
-            if not os.path.exists(download_dir):
-                download_dir = BASE_DIR
-
-            output_pdf = os.path.join(download_dir, "Cable_Quotation.pdf")
+            output_pdf = "Cable_Quotation.pdf"
             generate_pdf(output_pdf, info, items, net, disc_pct, disc_val, grand, words_text.value, terms)
 
-            show_snack(f"PDF saved to Download: {output_pdf}")
+            show_snack(f"PDF successfully saved as: {output_pdf}")
         except Exception as ex:
             show_snack(f"Error generating PDF: {str(ex)}")
 
@@ -561,7 +557,7 @@ def main(page: ft.Page):
                     bgcolor=ft.Colors.RED_800,
                     padding=12,
                     border_radius=8,
-                    margin=ft.Margin(left=0, top=25, right=0, bottom=5)  # Safe Margin object
+                    margin=ft.Margin(left=0, top=25, right=0, bottom=5)
                 ),
                 ft.Card(
                     content=ft.Container(
@@ -638,7 +634,7 @@ def main(page: ft.Page):
                         height=50,
                         on_click=export_pdf_click
                     ),
-                    padding=ft.Padding(left=0, top=10, right=0, bottom=20),  # Safe Padding object
+                    padding=ft.Padding(left=0, top=10, right=0, bottom=20),
                     alignment=ft.Alignment(0, 0)
                 )
             ])
